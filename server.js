@@ -16,6 +16,10 @@ const io = new Server(server, {
 
 const boards = {};
 
+function generateUniqueCode() {
+  return Math.random().toString(36).substr(2, 5);
+}
+
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
@@ -25,60 +29,92 @@ io.on("connection", (socket) => {
 
   socket.on("create_board", ({ displayName, boardName, sections }) => {
     const boardCode = generateUniqueCode();
+
     boards[boardCode] = {
       creator: displayName,
-      boardName: boardName,
-      sections: sections,
+      boardCode,
+      boardName,
+      sections,
       users: [{ id: socket.id, name: displayName, role: "creator" }],
     };
+
     socket.join(boardCode);
 
-    io.to(socket.id).emit("board_created", {
-      boardCode,
-      sections: boards[boardCode].sections,
-    });
+    io.to(socket.id).emit("board_created", { board: boards[boardCode] });
 
     console.log(`Board created: ${boardCode}, with sections: ${sections}`);
   });
 
   socket.on("join_board", ({ boardCode, displayName }) => {
-    if (boards[boardCode]) {
+    const board = boards[boardCode];
+
+    if (board) {
       socket.join(boardCode);
-      boards[boardCode].users.push({
-        id: socket.id,
-        name: displayName,
-        role: "member",
-      });
+
+      board.users.push({ id: socket.id, name: displayName, role: "member" });
+
       io.to(boardCode).emit("user_joined", { name: displayName });
-      socket.emit("joined_board", { data: boards[boardCode] });
+
+      socket.emit("joined_board", { board: boards[boardCode] });
+
       console.log(`User ${displayName} joined board: ${boardCode}`);
     } else {
       socket.emit("error", { message: "Board not found." });
     }
   });
 
+  socket.on("check_room", ({ boardCode }) => {
+    const rooms = socket.rooms;
+    if (rooms.has(boardCode)) {
+      socket.emit("room_status", { inRoom: true });
+      console.log(`User ${socket.id} is in room: ${boardCode}`);
+    } else {
+      socket.emit("room_status", { inRoom: false });
+      console.log(`User ${socket.id} is not in room: ${boardCode}`);
+    }
+  });
+
+  socket.on("check_room_exists", ({ boardCode }) => {
+    const room = io.sockets.adapter.rooms.get(boardCode);
+
+    if (room) {
+      const usersInRoom = Array.from(room);
+      socket.emit("room_exists", { exists: true, users: usersInRoom });
+      console.log(`Room ${boardCode} exists with users:`, usersInRoom);
+    } else {
+      socket.emit("room_exists", { exists: false });
+      console.log(`Room ${boardCode} does not exist.`);
+    }
+  });
+
   socket.on("add_post", ({ boardCode, sectionId, post }) => {
-    console.log("added", boardCode, sectionId, post);
-    if (boards[boardCode]) {
-      const section = boards[boardCode].sections.find(
-        (sec) => sec.id === sectionId,
-      );
+    const board = boards[boardCode];
+
+    if (board) {
+      const section = board.sections.find((sec) => sec.id === sectionId);
+
       if (section) {
         section.posts.push(post);
         io.to(boardCode).emit("post_added", { sectionId, post });
+
+        console.log(`Post added to board ${boardCode}, section ${sectionId}`);
       }
     }
-    console.log("sections 1", boards[boardCode].sections[1]);
   });
 
   socket.on("remove_post", ({ boardCode, sectionId, postId }) => {
-    if (boards[boardCode]) {
-      const section = boards[boardCode].sections.find(
-        (sec) => sec.id === sectionId,
-      );
+    const board = boards[boardCode];
+
+    if (board) {
+      const section = board.sections.find((sec) => sec.id === sectionId);
+
       if (section) {
         section.posts = section.posts.filter((post) => post.id !== postId);
         io.to(boardCode).emit("post_removed", { sectionId, postId });
+
+        console.log(
+          `Post removed from board ${boardCode}, section ${sectionId}`,
+        );
       }
     }
   });
@@ -87,10 +123,6 @@ io.on("connection", (socket) => {
     console.log(`User Disconnected: ${socket.id}`);
   });
 });
-
-function generateUniqueCode() {
-  return Math.random().toString(36).substr(2, 5);
-}
 
 server.listen(8080, () => {
   console.log("Server Started on port 8080");
