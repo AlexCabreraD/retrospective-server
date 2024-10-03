@@ -23,6 +23,8 @@ function generateUniqueCode() {
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
+  let currentBoardCode = null;
+
   socket.on("test", ({ boardCode }) => {
     socket.emit("joined_board", boards[boardCode]);
   });
@@ -39,6 +41,7 @@ io.on("connection", (socket) => {
     };
 
     socket.join(boardCode);
+    currentBoardCode = boardCode;
 
     io.to(socket.id).emit("board_created", { board: boards[boardCode] });
 
@@ -50,11 +53,11 @@ io.on("connection", (socket) => {
 
     if (board) {
       socket.join(boardCode);
+      currentBoardCode = boardCode;
 
       board.users.push({ id: socket.id, name: displayName, role: "member" });
 
       io.to(boardCode).emit("user_joined", { name: displayName });
-
       socket.emit("joined_board", { board: boards[boardCode] });
 
       console.log(`User ${displayName} joined board: ${boardCode}`);
@@ -89,10 +92,8 @@ io.on("connection", (socket) => {
 
   socket.on("add_post", ({ boardCode, sectionId, post }) => {
     const board = boards[boardCode];
-
     if (board) {
       const section = board.sections.find((sec) => sec.id === sectionId);
-
       if (section) {
         section.posts.push(post);
         io.to(boardCode).emit("post_added", { sectionId, post });
@@ -121,6 +122,16 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`User Disconnected: ${socket.id}`);
+
+    const rooms = Object.keys(socket.rooms);
+    rooms.forEach((room) => {
+      if (boards[room]) {
+        const board = boards[room];
+        board.users = board.users.filter((user) => user.id !== socket.id);
+
+        socket.to(room).emit("left_board", { userId: socket.id });
+      }
+    });
   });
 });
 
