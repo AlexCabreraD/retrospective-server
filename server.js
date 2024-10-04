@@ -16,6 +16,8 @@ const io = new Server(server, {
 
 const boards = {};
 
+const user = {};
+
 function generateUniqueCode() {
   return Math.random().toString(36).substr(2, 5);
 }
@@ -32,18 +34,25 @@ io.on("connection", (socket) => {
   socket.on("create_board", ({ displayName, boardName, sections }) => {
     const boardCode = generateUniqueCode();
 
+    user.id = socket.id;
+    user.name = displayName;
+    user.role = "creator";
+
     boards[boardCode] = {
       creator: displayName,
       boardCode,
       boardName,
       sections,
-      users: [{ id: socket.id, name: displayName, role: "creator" }],
+      users: [user],
     };
 
     socket.join(boardCode);
     currentBoardCode = boardCode;
 
-    io.to(socket.id).emit("board_created", { board: boards[boardCode] });
+    io.to(socket.id).emit("board_created", {
+      board: boards[boardCode],
+      user: user,
+    });
 
     console.log(`Board created: ${boardCode}, with sections: ${sections}`);
   });
@@ -51,16 +60,20 @@ io.on("connection", (socket) => {
   socket.on("join_board", ({ boardCode, displayName }) => {
     const board = boards[boardCode];
 
+    user.id = socket.id;
+    user.name = displayName;
+    user.role = "member";
+
     if (board) {
       socket.join(boardCode);
       currentBoardCode = boardCode;
 
-      board.users.push({ id: socket.id, name: displayName, role: "member" });
+      board.users.push(user);
 
       io.to(boardCode).emit("user_joined", { name: displayName });
-      socket.emit("joined_board", { board: boards[boardCode] });
+      socket.emit("joined_board", { board: boards[boardCode], user: user });
 
-      console.log(`User ${displayName} joined board: ${boardCode}`);
+      console.log(`User ${user.name} joined board: ${boardCode}`);
     } else {
       socket.emit("error", { message: "Board not found." });
     }
