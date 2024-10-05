@@ -133,6 +133,11 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("start_voting", () => {
+    io.to(currentBoardCode).emit("vote_started");
+    console.log(`voting start on ${currentBoardCode}`);
+  });
+
   socket.on("disconnect", () => {
     console.log(`User Disconnected: ${socket.id}`);
 
