@@ -146,7 +146,7 @@ io.on("connection", (socket) => {
       if (section) {
         const post = section.posts.find((post) => post.id === postId);
         if (post) {
-          post.likeCount += 1; // Increment the like count
+          post.likeCount += 1;
           io.to(currentBoardCode).emit("post_upvoted", {
             sectionId: sectionId,
             postId: postId,
