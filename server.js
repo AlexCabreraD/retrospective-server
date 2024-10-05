@@ -138,6 +138,29 @@ io.on("connection", (socket) => {
     console.log(`voting start on ${currentBoardCode}`);
   });
 
+  socket.on("upvote_post", ({ postId, sectionId }) => {
+    const board = boards[currentBoardCode];
+
+    if (board) {
+      const section = board.sections.find((sec) => sec.id === sectionId);
+      if (section) {
+        const post = section.posts.find((post) => post.id === postId);
+        if (post) {
+          post.likeCount += 1; // Increment the like count
+          io.to(currentBoardCode).emit("post_upvoted", {
+            sectionId: sectionId,
+            postId: postId,
+            likeCount: post.likeCount,
+          });
+
+          console.log(
+            `Post with ID ${postId} in section ${sectionId} has been upvoted. New like count: ${post.likeCount}`,
+          );
+        }
+      }
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log(`User Disconnected: ${socket.id}`);
 
