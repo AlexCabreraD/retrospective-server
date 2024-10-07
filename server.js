@@ -147,7 +147,7 @@ io.on("connection", (socket) => {
         const post = section.posts.find((post) => post.id === postId);
         if (post) {
           post.likeCount += 1;
-          io.to(currentBoardCode).emit("post_upvoted", {
+          io.to(currentBoardCode).emit("post_voted_update", {
             sectionId: sectionId,
             postId: postId,
             likeCount: post.likeCount,
@@ -155,6 +155,59 @@ io.on("connection", (socket) => {
 
           console.log(
             `Post with ID ${postId} in section ${sectionId} has been upvoted. New like count: ${post.likeCount}`,
+          );
+        }
+      }
+    }
+  });
+
+  socket.on("undo_upvote_post", ({ postId, sectionId }) => {
+    const board = boards[currentBoardCode];
+
+    if (board) {
+      const section = board.sections.find((sec) => sec.id === sectionId);
+      if (section) {
+        const post = section.posts.find((post) => post.id === postId);
+        if (post) {
+          post.likeCount -= 1;
+          io.to(currentBoardCode).emit("post_voted_update", {
+            sectionId: sectionId,
+            postId: postId,
+            likeCount: post.likeCount,
+          });
+
+          console.log(
+            `Post with ID ${postId} in section ${sectionId} has been upvoted. New like count: ${post.likeCount}`,
+          );
+        }
+      }
+    }
+  });
+
+  socket.on("post_comment", ({ postId, sectionId, commentText }) => {
+    console.log("this is a log", postId, sectionId, commentText);
+    const board = boards[currentBoardCode];
+    const comment = {
+      id: new Date().toString(),
+      user: user,
+      text: commentText,
+      timestamp: new Date(),
+    };
+
+    if (board) {
+      const section = board.sections.find((sec) => sec.id === sectionId);
+      if (section) {
+        const post = section.posts.find((post) => post.id === postId);
+        if (post) {
+          post.comments.push(comment);
+          io.to(currentBoardCode).emit("post_comments_update", {
+            sectionId: sectionId,
+            postId: postId,
+            comment: comment,
+          });
+
+          console.log(
+            `Added comment to ${postId}. Now has ${post.comments.length} comments`,
           );
         }
       }
