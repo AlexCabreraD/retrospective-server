@@ -31,12 +31,13 @@ io.on("connection", (socket) => {
     socket.emit("joined_board", boards[boardCode]);
   });
 
-  socket.on("create_board", ({ displayName, boardName, sections }) => {
+  socket.on("create_board", ({ displayName, bgColor, boardName, sections }) => {
     const boardCode = generateUniqueCode();
 
     user.id = socket.id;
     user.name = displayName;
     user.role = "creator";
+    user.color = bgColor;
 
     boards[boardCode] = {
       creator: displayName,
@@ -57,12 +58,13 @@ io.on("connection", (socket) => {
     console.log(`Board created: ${boardCode}, with sections: ${sections}`);
   });
 
-  socket.on("join_board", ({ boardCode, displayName }) => {
+  socket.on("join_board", ({ boardCode, displayName, bgColor }) => {
     const board = boards[boardCode];
 
     user.id = socket.id;
     user.name = displayName;
     user.role = "member";
+    user.color = bgColor;
 
     if (board) {
       socket.join(boardCode);
@@ -184,15 +186,9 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("post_comment", ({ postId, sectionId, commentText }) => {
-    console.log("this is a log", postId, sectionId, commentText);
+  socket.on("post_comment", ({ postId, sectionId, comment }) => {
+    console.log("this is a log", postId, sectionId, comment);
     const board = boards[currentBoardCode];
-    const comment = {
-      id: new Date().toString(),
-      user: user,
-      text: commentText,
-      timestamp: new Date(),
-    };
 
     if (board) {
       const section = board.sections.find((sec) => sec.id === sectionId);
