@@ -212,7 +212,11 @@ io.on("connection", (socket) => {
 
   socket.on("start_review", () => {
     io.to(currentBoardCode).emit("review_started");
-    console.log(`voting start on ${currentBoardCode}`);
+    console.log(`review start on ${currentBoardCode}`);
+  });
+
+  socket.on("next_post", () => {
+    io.to(currentBoardCode).emit("next_post");
   });
 
   socket.on("disconnect", () => {
