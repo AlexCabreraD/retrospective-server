@@ -9,7 +9,7 @@ app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "https://retrospective-ui.vercel.app",
     methods: ["GET", "POST"],
   },
 });
@@ -234,6 +234,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(8080, () => {
-  console.log("Server Started on port 8080");
-});
+// server.listen(8080, () => {
+//   console.log("Server Started on port 8080");
+// });
